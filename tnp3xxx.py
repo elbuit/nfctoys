@@ -13,7 +13,7 @@
 ## Dedication along with this software.  If not, see
 ## <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-import binascii, re, struct, sys
+import binascii, re, struct, sys, codecs
 
 uidre = re.compile('^[0-9a-f]{8}$', re.IGNORECASE)
 magic_nums = [2, 3, 73, 1103, 2017, 560381651, 12868356821]
@@ -45,11 +45,12 @@ def calc_keya(uid, sector):
         raise ValueError('invalid sector (0-15)')
     
     PRE = magic_nums[0] * magic_nums[0] * magic_nums[1] * magic_nums[3] * magic_nums[6]
-    ints = [ord(a) for a in uid.decode('hex')] + [sector]
-    
+    # python2
+    #ints = [ord(a) for a in uid.decode('hex')] + [sector]
+    # python3
+    ints = list(struct.unpack('<BBBB', bytes.fromhex(uid))) + [sector]
     key = pseudo_crc48(PRE, ints)
-    
-    return binascii.hexlify(struct.pack('<Q', key))[0:12]
+    return binascii.hexlify(struct.pack('<Q', key)).decode('ascii')[0:12]
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -57,6 +58,7 @@ if __name__ == '__main__':
         for sector in range(0, 16):
             keysa.append(calc_keya(sys.argv[1], sector))
         if len(sys.argv) > 2 and sys.argv[2] == '-eml':
-            print ('0'*20+'\n'+('0'*32+'\n')*3).join(keysa).join([(sys.argv[1]+'0'*24+'\n')+(('0'*32+'\n')*2), '0'*20])
+            print (('0'*20+'\n'+('0'*32+'\n')*3).join(keysa).join([(sys.argv[1]+'0'*24+'\n')+(('0'*32+'\n')*2), '0'*20]))
         else:
-            print '\n'.join(keysa)
+            for i in keysa:
+                print(i)
